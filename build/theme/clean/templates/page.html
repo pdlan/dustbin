@@ -1,0 +1,23 @@
+{% extends 'main/layout.html' %}
+
+{% block content %}
+<ol id="posts">
+    {% for article in articles %}
+    <li>
+        <span class="date">{{ article.date|format_time('%b %d, %Y') }}</span> <a href="{{ article.id|url_for('article') }}">{{ article.title }}</a>
+    </li>
+    {% endfor %}
+</ol>
+
+<div id="pagination">
+    {% if has_prev %}
+    <a id="prev" href="{{ prev|url_for('page') }}">Prev</a>
+    {% endif %}
+
+    <span>Page {{ page }} of {{ pages }}</span>
+
+    {% if has_next %}
+    <a id="next" href="{{ next|url_for('page') }}">Next</a>
+    {% endif %}
+</div>
+{% endblock %}
