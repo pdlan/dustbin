@@ -5,7 +5,7 @@
     {% block head %}{% endblock %}
     <meta name="viewport" content="width=device-width" />
     <title>{% block title %}{{ site.name }}{% endblock %}</title>
-    <link rel="stylesheet" href="{{ 'clean.css'|url_for('static') }}" type="text/css" />
+    <link rel="stylesheet" href="{{ 'clean.css'|url_for_static }}" type="text/css" />
     <link rel="alternate" type="application/rss+xml" href="{{ site.url }}" title="{{ site.name }}" />
 ##    <link rel="canonical" href="{{ permalink }}"/>
 </head>
@@ -14,10 +14,7 @@
         <header id="header">
             <a href="{{ site.url }}" id="site_name">{{ site.name }}</a>
             <nav>
-                <a href="{{ None|url_for('archives') }}">Archives</a>
-##                {% for page in pages %}
-##                <a href="{{ url_for(page) }}">{{ page.title }}</a>
-##                {% endfor %}
+                <a href="{{ 1|url_for_archives }}">Archives</a>
             </nav>
         </header>
         <div id="content">

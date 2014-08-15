@@ -8,7 +8,7 @@ namespace jinja2 {
 class Environment;
 }
 }
-enum class PageType {Normal, Tags, Archives};
+enum class PageType {Normal, Tag, Archives};
 class Theme {
     public:
         Theme() = default;

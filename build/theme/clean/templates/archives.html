@@ -1,0 +1,30 @@
+{% extends 'main/layout.html' %}
+
+{% block title %}
+Archives | {{ site.name }}
+{% endblock %}
+
+{% block content %}
+{% for archive in archives %}
+<h2>{{ archive.year }}</h2>
+<ol id="posts">
+    {% for article in archive.articles %}
+    <li>
+        <span class="meta">{{ article.date|format_time('%Y-%m-%d') }}</span> <a href="{{ article.id|url_for_article }}">{{ article.title }}</a>
+    </li>
+    {% endfor %}
+</ol>
+{% endfor %}
+
+<div id="pagination">
+    {% if has_prev %}
+    <a id="prev" href="{{ prev|url_for_page }}">Prev</a>
+    {% endif %}
+
+    <span>Page {{ page }} of {{ pages }}</span>
+
+    {% if has_next %}
+    <a id="next" href="{{ next|url_for_page }}">Next</a>
+    {% endif %}
+</div>
+{% endblock %}

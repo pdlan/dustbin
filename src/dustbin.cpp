@@ -1,9 +1,9 @@
 #include <stdint.h>
 #include <iostream>
+#include <sstream>
 #include <memory>
 #include <string>
 #include <vector>
-#include <tuple>
 #include <map>
 #include <exception>
 #include <jsoncpp/json/json.h>
@@ -14,9 +14,20 @@
 #include "model.h"
 #include "theme.h"
 #include "utils.h"
+#include "filters.h"
 
 using namespace recycled;
 using namespace recycled::jinja2;
+/*
+struct UrlForPage {
+    UrlForPage() {
+        Dustbin &dustbin = Dustbin::get_instance();
+        this->path = dustbin.paths["page"];
+    }
+    std::string path;
+    const std::vector<Json::ValueType> arguments = {Json::intValue};
+};
+*/
 
 Dustbin & Dustbin::get_instance() {
     static Dustbin dustbin;
@@ -58,27 +69,40 @@ bool Dustbin::initialize(const Json::Value &config) {
     const Json::Value &paths = url["paths"];
     if (!check_members(patterns, {
         {"archives", Json::stringValue},
+        {"archives-page", Json::stringValue},
         {"page", Json::stringValue},
-        {"article", Json::stringValue}
+        {"article", Json::stringValue},
+        {"tag", Json::stringValue},
+        {"tag-page", Json::stringValue}
     }) || ! check_members(paths, {
         {"archives", Json::stringValue},
+        {"archives-page", Json::stringValue},
         {"static", Json::stringValue},
         {"page", Json::stringValue},
-        {"article", Json::stringValue}
+        {"article", Json::stringValue},
+        {"tag", Json::stringValue},
+        {"tag-page", Json::stringValue}
     })) {
         return false;
     }
     this->paths = {
         {"archives", paths["archives"].asString()},
+        {"archives-page", paths["archives-page"].asString()},
         {"static", paths["static"].asString()},
         {"page", paths["page"].asString()},
-        {"article", paths["article"].asString()}
+        {"article", paths["article"].asString()},
+        {"tag", paths["tag"].asString()},
+        {"tag-page", paths["tag-page"].asString()}
     };
     std::shared_ptr<Environment> env;
     if (!this->theme || !(env = this->theme->get_environment())) {
         return false;
     }
-    if (!env->add_filter("url_for", filter_url_for)) {
+    if (!env->add_filter("url_for_archives", filter_url_for_archives) ||
+        !env->add_filter("url_for_static", filter_url_for_static) ||
+        !env->add_filter("url_for_page", filter_url_for_page) ||
+        !env->add_filter("url_for_article", filter_url_for_article) ||
+        !env->add_filter("url_for_tag", filter_url_for_tag)) {
         return false;
     }
     const std::string &db_type = db["type"].asString();
@@ -125,6 +149,26 @@ bool Dustbin::initialize(const Json::Value &config) {
             {
                 "/static/<.*:path>",
                 StaticFileHandler("theme/" + theme + "/static/"),
+                {HTTPMethod::GET}
+            },
+            {
+                patterns["archives-page"].asString(),
+                archives_handler,
+                {HTTPMethod::GET}
+            },
+            {
+                patterns["archives"].asString(),
+                archives_handler,
+                {HTTPMethod::GET}
+            },
+            {
+                patterns["tag-page"].asString(),
+                tag_handler,
+                {HTTPMethod::GET}
+            },
+            {
+                patterns["tag"].asString(),
+                tag_handler,
                 {HTTPMethod::GET}
             }
         }));
@@ -179,45 +223,4 @@ bool Dustbin::set_globals() {
     }
     env->add_global("site", site);
     return true;
-}
-
-Json::Value Dustbin::filter_url_for(const Json::Value &arg,
-                                    const std::string &type) {
-    Dustbin &dustbin = Dustbin::get_instance();
-    typedef std::map<std::string, std::tuple<std::string, Json::ValueType>> M;
-    static const M arguments = {
-        {"static", std::forward_as_tuple("path", Json::stringValue)},
-        {"page", std::forward_as_tuple("page", Json::intValue)},
-        {"article", std::forward_as_tuple("id", Json::stringValue)}
-    };
-    if (type == "archives") {
-        return dustbin.paths["archives"];
-    }
-    auto replace = [](const std::string &str,
-                      const std::string &from,
-                      const std::string &to) {
-        size_t pos = str.find(from);
-        std::string buf = str;
-        if (pos == std::string::npos) {
-            return buf;
-        }
-        buf.replace(pos, from.length(), to);
-        return buf;
-    };
-    auto it = arguments.find(type);
-    if (it == arguments.end()) {
-        return "";
-    }
-    const std::tuple<std::string, Json::ValueType> &arg_info = it->second;
-    Json::ValueType arg_type = std::get<1>(arg_info);
-    if (arg_type != arg.type()) {
-        return "";
-    }
-    const std::string &arg_name = std::get<0>(arg_info);
-    std::string arg_value;
-    switch (arg_type) {
-        case Json::intValue: arg_value = std::to_string(arg.asInt()); break;
-        case Json::stringValue: arg_value = arg.asString(); break;
-    }
-    return replace(dustbin.paths[type], "<"+arg_name+">", arg_value);
 }

@@ -17,6 +17,11 @@ class Dustbin {
         recycled::jinja2::Template get_template(const std::string &name);
         std::shared_ptr<Model> & get_model();
         std::shared_ptr<Theme> & get_theme();
+        friend Json::Value filter_url_for_archives(int page);
+        friend Json::Value filter_url_for_static(const std::string &path);
+        friend Json::Value filter_url_for_page(int page);
+        friend Json::Value filter_url_for_article(const std::string &id);
+        friend Json::Value filter_url_for_tag(const std::string &tag, int page);
     private:
         std::shared_ptr<recycled::Application<recycled::HTTPServer>> application;
         std::shared_ptr<Model> model;
@@ -28,7 +33,7 @@ class Dustbin {
         ~Dustbin();
         Dustbin & operator=(const Dustbin &other) = delete;
         bool set_globals();
-        static Json::Value filter_url_for(const Json::Value &arg,
-                                          const std::string &type);
+        //template<int name, typename... Arguments>
+        //static Json::Value filter_url_for(Arguments... args);
 };
 #endif

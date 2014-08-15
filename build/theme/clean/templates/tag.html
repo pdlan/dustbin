@@ -1,0 +1,28 @@
+{% extends 'main/layout.html' %}
+
+{% block title %}
+{{ name }} | {{ site.name }}
+{% endblock %}
+
+{% block content %}
+<h2>Tag: {{ name }}</h2>
+<ol id="posts">
+    {% for article in articles %}
+    <li>
+        <span class="meta">{{ article.date|format_time('%Y-%m-%d') }}</span> <a href="{{ article.id|url_for_article }}">{{ article.title }}</a>
+    </li>
+    {% endfor %}
+</ol>
+
+<div id="pagination">
+    {% if has_prev %}
+    <a id="prev" href="{{ prev|url_for_page }}">Prev</a>
+    {% endif %}
+
+    <span>Page {{ page }} of {{ pages }}</span>
+
+    {% if has_next %}
+    <a id="next" href="{{ next|url_for_page }}">Next</a>
+    {% endif %}
+</div>
+{% endblock %}

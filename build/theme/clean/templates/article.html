@@ -1,30 +1,26 @@
-{% extends 'layout.html' %}
-
-{% block head %}
-{{ meta(post) }}
-{% endblock %}
+{% extends 'main/layout.html' %}
 
 {% block title %}
-{{ post.title }} | {{ site.name }}
+{{ article.title }} | {{ site.name }}
 {% endblock %}
 
 {% block content %}
 <div class="post">
-    <h1 id="title">{{ post.title }}</h1>
+    <h1 id="title">{{ article.title }}</h1>
     <div class="date">
-    {{ post.datetime.strftime("%b %d, %Y") }}
+    {{ article.date|format_time('%b %d, %Y') }}
     </div>
     <article>
-    {{ post.content }}
+    {{ article.content }}
     </article>
-    {% if post.tags %}
+    {% if article.tags %}
     <div class="tags">
         Tagged in :
-        {% for tag in post.tags %}
-        <a href="{{ url_for(tag) }}">{{ tag.name }}</a>
+        {% for tag in article.tags %}
+        <a href="{{ tag|url_for_tag(1) }}">{{ tag }}</a>
         {% endfor %}
     </div>
     {% endif %}
-    {{ render_comment(post) }}
+##    {{ render_comment(post) }}
 </div>
 {% endblock %}

@@ -125,7 +125,7 @@ int MongoModel::get_articles(std::vector<Article> &articles,
     if (articles_per_page > 0) {
         pages = ceil((double)count / (double)articles_per_page);
     } else {
-        pages = count;
+        pages = 1;
     }
     return pages;
 }

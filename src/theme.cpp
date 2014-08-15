@@ -55,14 +55,14 @@ bool Theme::set_theme(const std::string &theme) {
     Json::Value articles_per_page = config["articles-per-page"];
     if (!check_members(articles_per_page, {
         {"normal", Json::intValue},
-        {"tags", Json::intValue},
+        {"tag", Json::intValue},
         {"archives", Json::intValue}
     })) {
         return false;
     }
     this->articles_per_page = {
         {PageType::Normal, articles_per_page["normal"].asInt()},
-        {PageType::Tags, articles_per_page["tags"].asInt()},
+        {PageType::Tag, articles_per_page["tag"].asInt()},
         {PageType::Archives, articles_per_page["archives"].asInt()}
     };
     return true;

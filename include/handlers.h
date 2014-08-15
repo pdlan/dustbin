@@ -3,5 +3,7 @@
 #include <recycled.h>
 
 void page_handler(recycled::Connection &conn);
+void archives_handler(recycled::Connection &conn);
+void tag_handler(recycled::Connection &conn);
 void article_handler(recycled::Connection &conn);
 #endif
