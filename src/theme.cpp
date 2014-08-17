@@ -1,5 +1,6 @@
 #include <time.h>
 #include <fstream>
+#include <iostream>
 #include <string>
 #include <memory>
 #include <recycled.h>
@@ -49,6 +50,8 @@ bool Theme::set_theme(const std::string &theme) {
         });
         this->env.reset(new Environment(loader));
     } catch (const std::exception &e) {
+        std::cerr << "Cannot create a environment.\n"
+                  << "----Detail: " << e.what() << ".\n";
         return false;
     }
     this->env->add_filter("format_time", filter_format_time);

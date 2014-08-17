@@ -8,6 +8,7 @@
 #include <jsoncpp/json/json.h>
 #include <recycled/jinja2.h>
 #include "model.h"
+#include "utils.h"
 
 using namespace mongo;
 
@@ -59,20 +60,35 @@ MongoModel::MongoModel() {}
 
 MongoModel::~MongoModel() {}
 
-bool MongoModel::initialize(const std::string &connstr,
-                            const std::string &name) {
+bool MongoModel::initialize(const std::string &connstr, const std::string &name,
+                            const Json::Value &auth) {
     std::string errmsg;
     ConnectionString cs = ConnectionString::parse(connstr, errmsg);
     if (!cs.isValid()) {
         std::cerr << "Invalid connection string\n"
-                  << "Error message: " << errmsg << std::endl;
+                  << "----Error message: " << errmsg << std::endl;
         return false;
     }
     this->conn = std::shared_ptr<DBClientBase>(cs.connect(errmsg));
     if (!this->conn) {
         std::cerr << "Cannot connect to database.\n"
-                  << "Error messgage: " << errmsg << std::endl;
+                  << "----Error messgage: " << errmsg << std::endl;
         return false;
+    }
+    if (!auth.empty()) {
+        if (!check_members(auth, {
+            {"username", Json::stringValue},
+            {"password", Json::stringValue}
+        })){
+            return false;
+        }
+        const std::string &username = auth["username"].asString();
+        const std::string &password = auth["password"].asString();
+        if (!this->conn->auth(name, username, password, errmsg)) {
+            std::cerr << "Failed to authorize access to database.\n"
+                      << "----Error message: " << errmsg << std::endl;
+            return false;
+        }
     }
     this->name = name;
     return true;

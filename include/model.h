@@ -18,7 +18,7 @@ namespace jinja2 {
 class Environment;
 }
 }
-static Json::Value EmptyObject(Json::objectValue);
+static const Json::Value EmptyObject(Json::objectValue);
 class Model {
     public:
         virtual bool get_article(const std::string &id, Article &article) = 0;
@@ -36,7 +36,8 @@ class MongoModel: public Model {
         MongoModel(const MongoModel &other) = delete;
         ~MongoModel();
         MongoModel & operator=(const MongoModel &other) = delete;
-        bool initialize(const std::string &connstr, const std::string &name);
+        bool initialize(const std::string &connstr, const std::string &name,
+                        const Json::Value &auth = EmptyObject);
         bool get_article(const std::string &id, Article &article);
         int get_articles(std::vector<Article> &articles,
                          int articles_per_page, int page,

@@ -36,6 +36,7 @@ Dustbin & Dustbin::get_instance() {
 
 bool Dustbin::initialize(const Json::Value &config) {
     if (!check_members(config, {
+        {"ip", Json::stringValue},
         {"port", Json::intValue},
         {"theme", Json::stringValue},
         {"db", Json::objectValue},
@@ -44,11 +45,13 @@ bool Dustbin::initialize(const Json::Value &config) {
         return false;
     }
     uint16_t port = (uint16_t)config["port"].asUInt();
+    const std::string &ip = config["ip"].asString();
     const std::string &theme = config["theme"].asString();
     const Json::Value &db = config["db"];
     const Json::Value &url = config["url"];
     this->config = config;
     if (!this->theme->set_theme(theme)) {
+        std::cerr << "Cannot set theme \"" << theme << "\".\n";
         return false;
     }
     if (!this->set_globals()) {
@@ -96,6 +99,7 @@ bool Dustbin::initialize(const Json::Value &config) {
     };
     std::shared_ptr<Environment> env;
     if (!this->theme || !(env = this->theme->get_environment())) {
+        std::cerr << "Bad template environment.\n";
         return false;
     }
     if (!env->add_filter("url_for_archives", filter_url_for_archives) ||
@@ -103,20 +107,31 @@ bool Dustbin::initialize(const Json::Value &config) {
         !env->add_filter("url_for_page", filter_url_for_page) ||
         !env->add_filter("url_for_article", filter_url_for_article) ||
         !env->add_filter("url_for_tag", filter_url_for_tag)) {
+        std::cerr << "Cannot add filters\n";
         return false;
     }
     const std::string &db_type = db["type"].asString();
     if (db_type == "mongodb") {
         if (!check_members(db, {
-            {"connection-string", Json::stringValue},
+            {"host", Json::stringValue},
             {"name", Json::stringValue}
         })) {
             return false;
         }
-        const std::string &db_connstr = db["connection-string"].asString();
+        const std::string &db_connstr = db["host"].asString();
         const std::string &db_name = db["name"].asString();
+        Json::Value db_auth(Json::objectValue);
+        if (db.isMember("auth")) {
+            if (db["auth"].type() == Json::objectValue) {
+                db_auth = db["auth"];
+            } else if (db["auth"].type() == Json::nullValue) {
+            } else {
+                return false;
+            }
+        }
         std::shared_ptr<MongoModel> model(new MongoModel);
-        if (!model->initialize(db_connstr, db_name)) {
+        if (!model->initialize(db_connstr, db_name, db_auth)) {
+            std::cerr << "Cannnot connect to database.\n";
             return false;
         }
         this->model = model;
@@ -172,8 +187,9 @@ bool Dustbin::initialize(const Json::Value &config) {
                 {HTTPMethod::GET}
             }
         }));
-        this->application->listen(port);
+        this->application->listen(port, ip);
     } catch (const std::exception &e) {
+        std::cerr << "Cannot listen.\n";
         return false;
     }
     return true;
