@@ -3,7 +3,9 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <sstream>
 #include <iostream>
+#include <openssl/sha.h>
 #include <mongo/client/dbclient.h>
 #include <jsoncpp/json/json.h>
 #include <recycled/jinja2.h>
@@ -12,8 +14,22 @@
 
 using namespace mongo;
 
-static inline bool check_bsonobj(const BSONObj &obj,
-                                 const std::map<std::string, BSONType> &items) {
+static std::string sha256(const std::string &str) {
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256_CTX ctx;
+    SHA256_Init(&ctx);
+    SHA256_Update(&ctx, str.c_str(), str.length());
+    SHA256_Final(hash, &ctx);
+    std::ostringstream buf;
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
+        buf << std::setiosflags(std::ios::uppercase) << std::hex
+            << std::setw(2) << std::setfill('0') << (int)hash[i];
+    }
+    return buf.str();
+}
+
+static bool check_bsonobj(const BSONObj &obj,
+                          const std::map<std::string, BSONType> &items) {
     for (auto it = items.cbegin(); it != items.cend(); ++it) {
         const std::string &name = it->first;
         BSONType type = it->second;
@@ -27,7 +43,7 @@ static inline bool check_bsonobj(const BSONObj &obj,
     return true;
 }
 
-static inline bool bsonobj_to_article(const BSONObj &obj, Article &article) {
+static bool bsonobj_to_article(const BSONObj &obj, Article &article) {
     if (!check_bsonobj(obj, {
         {"id", String},
         {"title", String},
@@ -54,6 +70,21 @@ static inline bool bsonobj_to_article(const BSONObj &obj, Article &article) {
     const Date_t &date = obj.getField("date").Date();
     article.date = date.toTimeT();
     return true;
+}
+
+static BSONObj article_to_bsonobj(const Article &article) {
+    BSONObjBuilder obj_builder;
+    BSONArrayBuilder tags_builder;
+    for (auto &tag: article.tags) {
+        tags_builder << tag;
+    }
+    Date_t date((long long)(article.date) * 1000);
+    obj_builder << "id" << article.id
+                << "title" << article.title
+                << "content" << article.content
+                << "tags" << tags_builder.arr()
+                << "date" << date;
+    return obj_builder.obj();
 }
 
 MongoModel::MongoModel() {}
@@ -92,6 +123,34 @@ bool MongoModel::initialize(const std::string &connstr, const std::string &name,
     }
     this->name = name;
     return true;
+}
+
+bool MongoModel::auth(const std::string &username,
+                      const std::string &password) {
+    auto cursor = this->conn->query(this->name + ".users",
+                                    QUERY("username" << username));
+    if (!cursor->more()) {
+        return false;
+    }
+    const BSONObj &obj = cursor->next();
+    if (!check_bsonobj(obj, {
+        {"password", String},
+        {"salt", String}
+    })) {
+        return false;
+    }
+    const std::string &password_encrypted = obj.getStringField("password");
+    const std::string &salt = obj.getStringField("salt");
+    return sha256(password + salt) == password_encrypted;
+}
+
+bool MongoModel::has_article(const std::string &id) {
+     if (!this->conn) {
+        return false;
+    }
+    auto cursor = this->conn->query(this->name + ".articles",
+                                    QUERY("id" << id));
+    return cursor->more();
 }
 
 bool MongoModel::get_article(const std::string &id, Article &article) {
@@ -144,4 +203,58 @@ int MongoModel::get_articles(std::vector<Article> &articles,
         pages = 1;
     }
     return pages;
+}
+
+bool MongoModel::new_article(const Article &article) {
+    if (!this->conn) {
+        return false;
+    }
+    if (this->has_article(article.id)) {
+        return false;
+    }
+    const BSONObj &obj = article_to_bsonobj(article);
+    this->conn->insert(this->name + ".articles", obj);
+    return true;
+}
+
+bool MongoModel::edit_article(const std::string &id,
+                              const std::string &title,
+                              const std::string &content,
+                              const std::set<std::string> &tags) {
+    if (!this->conn) {
+        return false;
+    }
+    auto cursor = this->conn->query(this->name + ".articles",
+                                    QUERY("id" << id));
+    if (!cursor->more()) {
+        return false;
+    }
+    const BSONObj &obj = cursor->next();
+    if (!check_bsonobj(obj, {
+        {"id", String},
+        {"date", Date}
+    })) {
+        return false;
+    }
+    BSONArrayBuilder tags_bson;
+    for (auto &tag: tags) {
+        tags_bson.append(tag);
+    }
+    this->conn->update(this->name + ".articles",
+                       QUERY("id" << id),
+                       BSON("id" << id << "title" << title << "content" <<
+                            content << "tags" << tags_bson.arr() << "date" <<
+                            obj.getField("date")));
+    return true;
+}
+
+bool MongoModel::delete_article(const std::string &id) {
+    if (!this->conn) {
+        return false;
+    }
+    if (!this->has_article(id)) {
+        return false;
+    }
+    this->conn->remove(this->name + ".articles", QUERY("id" << id));
+    return true;
 }

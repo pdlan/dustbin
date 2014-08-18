@@ -1,0 +1,59 @@
+{% extends 'admin/layout.html' %}
+{% block title %}文章 - {{ site.name }}{% endblock %}
+{% block head %}
+<script type="text/javascript" src="/admin/static/js/articles.js"></script>
+{% endblock %}
+{% block active_articles %} class="active"{% endblock %}
+{% block content %}
+<div class="modal fade" id="confirm-delete-dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">取消</span></button>
+        <h4 class="modal-title">确认删除</h4>
+      </div>
+      <div class="modal-body">
+        <p>确定删除此文章?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger" id="confirm-delete">删除</button>
+        <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="row">
+  <div class="col-md-10 col-md-offset-1">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <span>文章</span>
+        <a style="float: right" href="/admin/articles/new/">新建文章</a>
+      </div>
+      <table class="table panel-body">
+        {% for article in articles %}
+        <tr data-id="{{ article.id }}">
+          <td class="col-md-2">{{ article.date|format_time('%b %d') }}</td>
+          <td class="col-md-8 col-md-offset-2">
+            <a href="{{ article.id|url_for_article }}">{{ article.title }}</a>
+          </td>
+          <td class="col-md-1 col-md-offset-10">
+            <a href="/admin/articles/edit/{{ article.id }}/">编辑</a>
+          </td>
+          <td class="col-md-1 col-md-offset-10">
+            <a class="delete-article" data-id="{{ article.id }}">删除</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+    <ul class="pager">
+      {% if has_prev %}
+      <li class="previous"><a href="/admin/articles/page/{{ prev_page }}/">&larr; 上一页</a></li>
+      {% endif %}
+      {% if has_next %}
+      <li class="next"><a href="/admin/articles/page/{{ next_page }}/">下一页 &rarr;</a></li>
+      {% endif %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

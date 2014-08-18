@@ -1,5 +1,4 @@
 #include <iostream>
-#include <fstream>
 #include <string>
 #include <jsoncpp/json/json.h>
 #include "dustbin.h"
@@ -14,21 +13,9 @@ int main(int argc, char **argv) {
         std::cerr << "Usage: ./dustbin [config]\n";
         return 0;
     }
-    std::ifstream config_file(config_filename);
-    if (!config_file) {
-        std::cerr << "No such configuration file.\n";
-        return 0;
-    }
-    Json::Reader reader;
-    Json::Value config;
-    if (!reader.parse(config_file, config)) {
-        std::cerr << "Cannot parse the configuration file.\n";
-        return 0;
-    }
-    config_file.close();
     Dustbin & dustbin = Dustbin::get_instance();
-    if (!dustbin.initialize(config)) {
-        std::cerr << "Cannot initialize dustbin.\n";
+    dustbin.set_cmd_arg(argc, argv);
+    if (!dustbin.initialize(config_filename)) {
         return 0;
     }
     if (!dustbin.start()) {

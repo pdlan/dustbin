@@ -1,0 +1,29 @@
+{% extends 'admin/layout.html' %}
+{% block title %}配置 - {{ site.name }}{% endblock %}
+{% block active_config %} class="active"{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-md-10 col-md-offset-1">
+    <div class="panel panel-default">
+      <div class="panel-heading">修改配置(重启生效)</div>
+      <div class="panel-body">
+        <form class="form-horizontal" method="post" action="/admin/config/">
+          <div class="form-group">
+            <div class="col-md-12">
+              <textarea rows="15" class="form-control" id="config" name="config" required>{{ config }}</textarea>
+            </div>
+          </div>
+          <div class="form-group">
+            <div class="col-md-1">
+              <button type="submit" class="btn btn-default">修改</button>
+            </div>
+            <div class="col-md-1 col-md-offset-10">
+              <a href="/admin/restart/" class="btn btn-default">重启</a>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

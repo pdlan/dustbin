@@ -10,7 +10,7 @@ Archives | {{ site.name }}
 <ol id="posts">
     {% for article in archive.articles %}
     <li>
-        <span class="meta">{{ article.date|format_time('%Y-%m-%d') }}</span> <a href="{{ article.id|url_for_article }}">{{ article.title }}</a>
+        <span class="meta">{{ article.date|format_time('%b %d') }}</span> <a href="{{ article.id|url_for_article }}">{{ article.title }}</a>
     </li>
     {% endfor %}
 </ol>

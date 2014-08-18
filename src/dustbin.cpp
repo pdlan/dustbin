@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include <memory>
 #include <string>
@@ -18,23 +19,26 @@
 
 using namespace recycled;
 using namespace recycled::jinja2;
-/*
-struct UrlForPage {
-    UrlForPage() {
-        Dustbin &dustbin = Dustbin::get_instance();
-        this->path = dustbin.paths["page"];
-    }
-    std::string path;
-    const std::vector<Json::ValueType> arguments = {Json::intValue};
-};
-*/
 
 Dustbin & Dustbin::get_instance() {
     static Dustbin dustbin;
     return dustbin;
 }
 
-bool Dustbin::initialize(const Json::Value &config) {
+bool Dustbin::initialize(const std::string &config_filename) {
+    this->config_filename = config_filename;
+    std::ifstream config_file(config_filename);
+    if (!config_file.is_open()) {
+        std::cerr << "No such configuration file.\n";
+        return 0;
+    }
+    Json::Reader reader;
+    Json::Value config;
+    if (!reader.parse(config_file, config)) {
+        std::cerr << "Cannot parse the configuration file.\n";
+        return 0;
+    }
+    config_file.close();
     if (!check_members(config, {
         {"ip", Json::stringValue},
         {"port", Json::intValue},
@@ -42,6 +46,7 @@ bool Dustbin::initialize(const Json::Value &config) {
         {"db", Json::objectValue},
         {"url", Json::objectValue}
     })) {
+        std::cerr << "Invalid configuration file.\n";
         return false;
     }
     uint16_t port = (uint16_t)config["port"].asUInt();
@@ -61,11 +66,13 @@ bool Dustbin::initialize(const Json::Value &config) {
         {"patterns", Json::objectValue},
         {"paths", Json::objectValue}
     })) {
+        std::cerr << "Invalid configuration file.\n";
         return false;
     }
     if (!check_members(db, {
         {"type", Json::stringValue}
     })) {
+        std::cerr << "Invalid configuration file.\n";
         return false;
     }
     const Json::Value &patterns = url["patterns"];
@@ -78,6 +85,7 @@ bool Dustbin::initialize(const Json::Value &config) {
         {"tag", Json::stringValue},
         {"tag-page", Json::stringValue}
     }) || ! check_members(paths, {
+        {"prefix", Json::stringValue},
         {"archives", Json::stringValue},
         {"archives-page", Json::stringValue},
         {"static", Json::stringValue},
@@ -86,9 +94,11 @@ bool Dustbin::initialize(const Json::Value &config) {
         {"tag", Json::stringValue},
         {"tag-page", Json::stringValue}
     })) {
+        std::cerr << "Invalid configuration file.\n";
         return false;
     }
     this->paths = {
+        {"prefix", paths["prefix"].asString()},
         {"archives", paths["archives"].asString()},
         {"archives-page", paths["archives-page"].asString()},
         {"static", paths["static"].asString()},
@@ -126,6 +136,7 @@ bool Dustbin::initialize(const Json::Value &config) {
                 db_auth = db["auth"];
             } else if (db["auth"].type() == Json::nullValue) {
             } else {
+                std::cerr << "Invalid configuration file.\n";
                 return false;
             }
         }
@@ -142,6 +153,11 @@ bool Dustbin::initialize(const Json::Value &config) {
     try {
         this->application.reset(new Application<HTTPServer>({
             {
+                "/static/<.*:path>",
+                StaticFileHandler("theme/" + theme + "/static/"),
+                {HTTPMethod::GET}
+            },
+            {
                 "/",
                 page_handler,
                 {HTTPMethod::GET}
@@ -154,16 +170,6 @@ bool Dustbin::initialize(const Json::Value &config) {
             {
                 patterns["article"].asString(),
                 article_handler,
-                {HTTPMethod::GET}
-            },
-            {
-                "/static/admin/<.*:path>",
-                StaticFileHandler("admin/static/"),
-                {HTTPMethod::GET}
-            },
-            {
-                "/static/<.*:path>",
-                StaticFileHandler("theme/" + theme + "/static/"),
                 {HTTPMethod::GET}
             },
             {
@@ -185,6 +191,56 @@ bool Dustbin::initialize(const Json::Value &config) {
                 patterns["tag"].asString(),
                 tag_handler,
                 {HTTPMethod::GET}
+            },
+            {
+                "/admin/static/<.*:path>",
+                StaticFileHandler("admin/static/"),
+                {HTTPMethod::GET}
+            },
+            {
+                "/admin/?",
+                admin_index_handler,
+                {HTTPMethod::GET}
+            },
+            {
+                "/admin/upload/?",
+                admin_upload_handler,
+                {HTTPMethod::POST}
+            },
+            {
+                "/admin/articles/?",
+                admin_articles_handler,
+                {HTTPMethod::GET}
+            },
+            {
+                "/admin/articles/page/<page>/?",
+                admin_articles_handler,
+                {HTTPMethod::GET}
+            },
+            {
+                "/admin/articles/new/?",
+                admin_new_article_handler,
+                {HTTPMethod::GET, HTTPMethod::POST}
+            },
+            {
+                "/admin/articles/edit/<id>/?",
+                admin_edit_article_handler,
+                {HTTPMethod::GET, HTTPMethod::POST}
+            },
+            {
+                "/admin/articles/delete/<id>/?",
+                admin_delete_article_handler,
+                {HTTPMethod::POST}
+            },
+            {
+                "/admin/config/?",
+                admin_config_handler,
+                {HTTPMethod::GET, HTTPMethod::POST}
+            },
+            {
+                "/admin/restart/?",
+                admin_restart_handler,
+                {HTTPMethod::GET}
             }
         }));
         this->application->listen(port, ip);
@@ -193,6 +249,14 @@ bool Dustbin::initialize(const Json::Value &config) {
         return false;
     }
     return true;
+}
+
+void Dustbin::set_cmd_arg(int argc, char **argv) {
+    this->argv = new char *[argc + 1];
+    for (int i = 0; i < argc; ++i) {
+        this->argv[i] = argv[i];
+    }
+    this->argv[argc] = 0;
 }
 
 bool Dustbin::start() {
@@ -212,7 +276,15 @@ std::shared_ptr<Theme> & Dustbin::get_theme() {
     return this->theme;
 }
 
-Dustbin::Dustbin(): theme(new Theme) {
+const std::string & Dustbin::get_config_filename() {
+    return this->config_filename;
+}
+
+void Dustbin::restart() {
+    execv(this->argv[0], this->argv);
+}
+
+Dustbin::Dustbin(): theme(new Theme), argv(nullptr) {
 }
 
 Dustbin::~Dustbin() {

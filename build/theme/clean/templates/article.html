@@ -21,6 +21,6 @@
         {% endfor %}
     </div>
     {% endif %}
-##    {{ render_comment(post) }}
+    {% include 'block/comment.html' ignore missing %}
 </div>
 {% endblock %}

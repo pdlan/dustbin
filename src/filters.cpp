@@ -16,36 +16,42 @@ static std::string replace(const std::string &str,
 
 Json::Value filter_url_for_archives(int page) {
     Dustbin &dustbin = Dustbin::get_instance();
+    const std::string &prefix = dustbin.paths["prefix"];
     if (page == 1) {
-        return dustbin.paths["archives"];
+        return prefix + dustbin.paths["archives"];
     }
     const std::string &path = dustbin.paths["archives-page"];
-    return replace(path, "<page>", std::to_string(page));
+    return prefix + replace(path, "<page>", std::to_string(page));
 }
 
 Json::Value filter_url_for_static(const std::string &path) {
     Dustbin &dustbin = Dustbin::get_instance();
-    return replace(dustbin.paths["static"], "<path>", path);
+    const std::string &prefix = dustbin.paths["prefix"];
+    return prefix + replace(dustbin.paths["static"], "<path>", path);
 }
 
 Json::Value filter_url_for_page(int page) {
     Dustbin &dustbin = Dustbin::get_instance();
+    const std::string &prefix = dustbin.paths["prefix"];
     if (page == 1) {
-        return "/";
+        return prefix + "/";
     }
-    return replace(dustbin.paths["page"], "<page>", std::to_string(page));
+    return prefix + replace(dustbin.paths["page"],
+                            "<page>", std::to_string(page));
 }
 
 Json::Value filter_url_for_article(const std::string &id) {
     Dustbin &dustbin = Dustbin::get_instance();
-    return replace(dustbin.paths["article"], "<id>", id);
+    const std::string &prefix = dustbin.paths["prefix"];
+    return prefix + replace(dustbin.paths["article"], "<id>", id);
 }
 
 Json::Value filter_url_for_tag(const std::string &tag, int page) {
     Dustbin &dustbin = Dustbin::get_instance();
+    const std::string &prefix = dustbin.paths["prefix"];
     if (page == 1) {
-        return replace(dustbin.paths["tag"], "<tag>", tag);
+        return prefix + replace(dustbin.paths["tag"], "<tag>", tag);
     }
     const std::string &path = replace(dustbin.paths["tag-page"], "<tag>", tag);
-    return replace(path, "<page>", std::to_string(page));
+    return prefix + replace(path, "<page>", std::to_string(page));
 }
