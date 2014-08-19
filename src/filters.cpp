@@ -2,17 +2,8 @@
 #include <jsoncpp/json/json.h>
 #include "dustbin.h"
 #include "filters.h"
+#include "utils.h"
 
-static std::string replace(const std::string &str,
-                           const std::string &from,
-                           const std::string &to) {
-    std::string buf = str;
-    size_t pos;
-    while ((pos = buf.find(from)) != std::string::npos) {
-        buf.replace(pos, from.length(), to);
-    }
-    return buf;
-};
 
 Json::Value filter_url_for_archives(int page) {
     Dustbin &dustbin = Dustbin::get_instance();
@@ -54,4 +45,10 @@ Json::Value filter_url_for_tag(const std::string &tag, int page) {
     }
     const std::string &path = replace(dustbin.paths["tag-page"], "<tag>", tag);
     return prefix + replace(path, "<page>", std::to_string(page));
+}
+
+Json::Value filter_url_for_custom_page(const std::string &id) {
+    Dustbin &dustbin = Dustbin::get_instance();
+    const std::string &prefix = dustbin.paths["prefix"];
+    return prefix + replace(dustbin.paths["custom-page"], "<id>", id);
 }

@@ -14,7 +14,12 @@
         <header id="header">
             <a href="{{ site.url }}" id="site_name">{{ site.name }}</a>
             <nav>
-                <a href="{{ 1|url_for_archives }}">Archives</a>
+                {% if custom_pages is iterable %}
+                    {% for page in custom_pages %}
+                    <a href="{{ page.id|url_for_custom_page }}">{{ page.title }}</a>
+                    {% endfor %}
+                {% endif %}
+              <a href="{{ 1|url_for_archives }}">Archives</a>
             </nav>
         </header>
         <div id="content">

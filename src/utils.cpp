@@ -20,3 +20,14 @@ bool check_members(const Json::Value &json,
     }
     return true;
 }
+
+std::string replace(const std::string &str,
+                    const std::string &from,
+                    const std::string &to) {
+    std::string buf = str;
+    size_t pos;
+    while ((pos = buf.find(from)) != std::string::npos) {
+        buf.replace(pos, from.length(), to);
+    }
+    return buf;
+};

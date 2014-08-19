@@ -1,18 +1,38 @@
-#include <stdio.h>
 #include <math.h>
 #include <string>
 #include <vector>
 #include <map>
 #include <sstream>
-#include <iostream>
 #include <openssl/sha.h>
 #include <mongo/client/dbclient.h>
 #include <jsoncpp/json/json.h>
-#include <recycled/jinja2.h>
 #include "model.h"
-#include "utils.h"
+#include "models/mongo.h"
 
 using namespace mongo;
+
+extern"C" Model *get_model() {
+    return new MongoModel;
+}
+
+static bool
+check_members(const Json::Value &json,
+              const std::map<std::string, Json::ValueType> &members) {
+    if (!json.isObject()) {
+        return false;
+    }
+    for (auto it = members.cbegin(); it != members.cend(); ++it) {
+        const std::string &name = it->first;
+        Json::ValueType type = it->second;
+        if (!json.isMember(name)) {
+            return false;
+        }
+        if (json[name].type() != type) {
+            return false;
+        }
+    }
+    return true;
+}
 
 static std::string sha256(const std::string &str) {
     unsigned char hash[SHA256_DIGEST_LENGTH];
@@ -72,6 +92,27 @@ static bool bsonobj_to_article(const BSONObj &obj, Article &article) {
     return true;
 }
 
+static bool bsonobj_to_page(const BSONObj &obj, CustomPage &page,
+                            bool has_content) {
+    if (!check_bsonobj(obj, {
+        {"id", String},
+        {"title", String},
+        {"content", String},
+    })) {
+        return false;
+    }
+    if (!obj.hasField("order")) {
+        return false;
+    }
+    page.id = obj.getStringField("id");
+    page.title = obj.getStringField("title");
+    if (has_content) {
+        page.content = obj.getStringField("content");
+    }
+    page.order = obj.getIntField("order");
+    return true;
+}
+
 static BSONObj article_to_bsonobj(const Article &article) {
     BSONObjBuilder obj_builder;
     BSONArrayBuilder tags_builder;
@@ -91,8 +132,32 @@ MongoModel::MongoModel() {}
 
 MongoModel::~MongoModel() {}
 
-bool MongoModel::initialize(const std::string &connstr, const std::string &name,
-                            const Json::Value &auth) {
+bool MongoModel::check_config(const Json::Value &config) {
+    if (!check_members(config, {
+        {"host", Json::stringValue},
+        {"name", Json::stringValue}
+    })) {
+        return false;
+    }
+    if (config.isMember("auth")) {
+        if (config["auth"].type() != Json::objectValue &&
+            config["auth"].type() != Json::nullValue) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool MongoModel::initialize(const Json::Value &config) {
+    if (!this->check_config(config)) {
+        return false;
+    }
+    const std::string &connstr = config["host"].asString();
+    const std::string &name = config["name"].asString();
+    Json::Value auth(Json::objectValue);
+    if (config.isMember("auth") && config["auth"].type() == Json::objectValue) {
+        auth = config["auth"];
+    }
     std::string errmsg;
     ConnectionString cs = ConnectionString::parse(connstr, errmsg);
     if (!cs.isValid()) {
@@ -257,4 +322,46 @@ bool MongoModel::delete_article(const std::string &id) {
     }
     this->conn->remove(this->name + ".articles", QUERY("id" << id));
     return true;
+}
+
+bool MongoModel::has_page(const std::string &id) {
+     if (!this->conn) {
+        return false;
+    }
+    auto cursor = this->conn->query(this->name + ".pages",
+                                    QUERY("id" << id));
+    return cursor->more();
+}
+
+bool MongoModel::get_page(const std::string &id, CustomPage &page) {
+    if (!this->conn) {
+        return false;
+    }
+    auto cursor = this->conn->query(this->name + ".pages",
+                                    QUERY("id" << id));
+    if (cursor->more()) {
+        const BSONObj &obj = cursor->next();
+        CustomPage new_page;
+        if (!bsonobj_to_page(obj, new_page, true)) {
+            return false;
+        }
+        page = new_page;
+        return true;
+    }
+    return false;
+}
+
+void MongoModel::get_pages(std::vector<CustomPage> &pages, bool has_content) {
+    if (!this->conn) {
+        return;
+    }
+    auto cursor = this->conn->query(this->name + ".pages",
+                                    Query().sort("order"));
+    while (cursor->more()) {
+        CustomPage page;
+        const BSONObj &obj = cursor->next();
+        if (bsonobj_to_page(obj, page, has_content)) {
+            pages.push_back(page);
+        }
+    }
 }

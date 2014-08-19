@@ -11,6 +11,7 @@
 #include <recycled.h>
 #include <recycled/jinja2.h>
 #include "model.h"
+#include "utils.h"
 #include "theme.h"
 #include "dustbin.h"
 
@@ -223,6 +224,38 @@ void article_handler(Connection &conn) {
     }
 }
 
+void custom_page_handler(Connection &conn) {
+    conn.add_header("Content-Type", "text/html");
+    Dustbin &dustbin = Dustbin::get_instance();
+    std::shared_ptr<Model> &model = dustbin.get_model();
+    if (!model) {
+        conn.send_error(500);
+        return;
+    }
+    const std::string &id = conn.get_path_argument("id");
+    if (id.empty()) {
+        conn.send_error(404);
+        return;
+    }
+    CustomPage page;
+    if (!model->get_page(id, page)) {
+        conn.send_error(404);
+        return;
+    }
+    const Template &temp = dustbin.get_template("main/custom_page.html");
+    Json::Value page_json;
+    page_json["id"] = page.id;
+    page_json["title"] = page.title;
+    page_json["content"] = page.content;
+    page_json["order"] = page.order;
+    ValueMap arguments = {
+        {"page", page_json}
+    };
+    if (!temp.render(arguments, conn)) {
+        conn.send_error(500);
+    }
+}
+
 void admin_index_handler(Connection &conn) {
     if (!auth(conn)) {
         require_auth(conn);
@@ -237,12 +270,20 @@ void admin_index_handler(Connection &conn) {
 }
 
 void admin_upload_handler(Connection &conn) {
+    Dustbin &dustbin = Dustbin::get_instance();
     const UploadFile *file_upload = conn.get_file("image");
     if (!file_upload) {
-        conn.send_error(404);
+        conn.send_error(400);
         return;
     }
-    std::string upload_dir = "upload/";
+    const Json::Value &config = dustbin.get_config();
+    if (!config["enable-upload"].asBool()) {
+        conn.send_error(403);
+        return;
+    }
+    const std::string &upload_dir = config["upload-dir"].asString() + "/";
+    const std::string &upload_path =
+        config["url"]["paths"]["upload"].asString();
     std::string filename = file_upload->filename;
     std::ifstream ifile;
     for (int i = 0; ; ++i) {
@@ -257,6 +298,14 @@ void admin_upload_handler(Connection &conn) {
     std::ofstream ofile(upload_dir + filename);
     ofile.write(file_upload->data, file_upload->size);
     ofile.close();
+    std::string static_path = replace(upload_path, "<path>", filename);
+    Json::Value result, upload, links;
+    links["original"] = static_path;
+    upload["links"] = links;
+    result["upload"] = upload;
+    Json::FastWriter writer;
+    conn.add_header("Content-Type", "application/json");
+    conn.write(writer.write(result));
 }
 
 void admin_articles_handler(Connection &conn) {
@@ -487,4 +536,7 @@ void admin_config_handler(Connection &conn) {
 void admin_restart_handler(Connection &conn) {
     Dustbin &dustbin = Dustbin::get_instance();
     dustbin.restart();
+}
+
+void admin_pages_handler(Connection &conn) {
 }
