@@ -16,4 +16,8 @@ void admin_delete_article_handler(recycled::Connection &conn);
 void admin_config_handler(recycled::Connection &conn);
 void admin_restart_handler(recycled::Connection &conn);
 void admin_pages_handler(recycled::Connection &conn);
+void admin_new_page_handler(recycled::Connection &conn);
+void admin_edit_page_handler(recycled::Connection &conn);
+void admin_delete_page_handler(recycled::Connection &conn);
+void admin_reorder_pages_handler(recycled::Connection &conn);
 #endif

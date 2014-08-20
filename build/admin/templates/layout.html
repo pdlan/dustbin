@@ -23,6 +23,7 @@
         <div class="collapse navbar-collapse" id="bar">
           <ul class="nav navbar-nav">
             <li{% block active_articles %}{% endblock %}><a href="/admin/articles/">文章</a></li>
+            <li{% block active_pages %}{% endblock %}><a href="/admin/pages/">页面</a></li>
             <li{% block active_config %}{% endblock %}><a href="/admin/config/">配置</a></li>
           </ul>
         </div>

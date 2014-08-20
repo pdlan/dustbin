@@ -365,3 +365,82 @@ void MongoModel::get_pages(std::vector<CustomPage> &pages, bool has_content) {
         }
     }
 }
+
+bool MongoModel::new_page(const CustomPage &page) {
+    if (!this->conn) {
+        return false;
+    }
+    if (this->has_page(page.id)) {
+        return false;
+    }
+    int order = 1;
+    auto cursor = this->conn->query(this->name + ".pages",
+                                    Query().sort("order", -1));
+    if (cursor->more()) {
+        const BSONObj &obj = cursor->next();
+        if (!check_bsonobj(obj, {
+            {"id", String},
+            {"title", String},
+            {"content", String},
+        })) {
+            return false;
+        }
+        if (!obj.hasField("order")) {
+            return false;
+        }
+        order = obj.getIntField("order") + 1;
+    }
+    this->conn->insert(this->name + ".pages",
+                       BSON("id" << page.id << "title" << page.title <<
+                            "content" << page.content << "order" << order));
+    return true;
+}
+
+bool MongoModel::edit_page(const std::string &id, const std::string &title,
+                           const std::string &content) {
+    CustomPage page;
+    if (!this->get_page(id, page)) {
+        return false;
+    }
+    int order = page.order;
+    this->conn->update(this->name + ".pages",
+                       QUERY("id" << id),
+                       BSON("id" << id << "title" << title << "content" <<
+                            content << "order" << order));
+    return true;
+}
+
+bool MongoModel::delete_page(const std::string &id) {
+    if (!this->conn) {
+        return false;
+    }
+    if (!this->has_page(id)) {
+        return false;
+    }
+    this->conn->remove(this->name + ".pages", QUERY("id" << id));
+    return true;
+}
+
+bool MongoModel::reorder_pages(const std::map<std::string, int> &orders) {
+    if (!this->conn) {
+        return false;
+    }
+    for (auto it = orders.cbegin(); it != orders.cend(); ++it) {
+        if (!this->has_page(it->first)) {
+            return false;
+        }
+    }
+    for (auto it = orders.cbegin(); it != orders.cend(); ++it) {
+        const std::string &id = it->first;
+        int order = it->second;
+        CustomPage page;
+        if (!this->get_page(id, page)) {
+            return false;
+        }
+        this->conn->update(this->name + ".pages",
+                           QUERY("id" << id),
+                           BSON("id" << id << "title" << page.title <<
+                                "content" << page.content << "order" << order));
+    }
+    return true;
+}

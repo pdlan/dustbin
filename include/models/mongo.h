@@ -34,6 +34,11 @@ class MongoModel: public Model {
         bool get_page(const std::string &id, CustomPage &page);
         void get_pages(std::vector<CustomPage> &pages,
                        bool has_content=true);
+        bool new_page(const CustomPage &page);
+        bool edit_page(const std::string &id, const std::string &title,
+                       const std::string &content);
+        bool delete_page(const std::string &id);
+        bool reorder_pages(const std::map<std::string, int> &orders);
     private:
         std::shared_ptr<mongo::DBClientBase> conn;
         std::string name;

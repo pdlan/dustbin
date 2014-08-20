@@ -31,7 +31,7 @@
       </div>
       <table class="table panel-body">
         {% for article in articles %}
-        <tr data-id="{{ article.id }}">
+        <tr data-id="{{ article.id|urlencode }}">
           <td class="col-md-2">{{ article.date|format_time('%b %d') }}</td>
           <td class="col-md-8 col-md-offset-2">
             <a href="{{ article.id|url_for_article }}">{{ article.title }}</a>
@@ -40,7 +40,7 @@
             <a href="/admin/articles/edit/{{ article.id }}/">编辑</a>
           </td>
           <td class="col-md-1 col-md-offset-10">
-            <a class="delete-article" data-id="{{ article.id }}">删除</a>
+            <a class="delete-article" data-id="{{ article.id|urlencode }}">删除</a>
           </td>
         </tr>
         {% endfor %}

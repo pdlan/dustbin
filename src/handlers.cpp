@@ -37,6 +37,13 @@ static void article_to_json(const Article *article, Json::Value &json) {
     json["tags"] = tags;
 }
 
+static void custom_page_to_json(const CustomPage &page, Json::Value &json) {
+    json["id"] = page.id;
+    json["title"] = page.title;
+    json["content"] = page.content;
+    json["order"] = page.order;
+}
+
 static bool auth(const Connection &conn) {
     Dustbin &dustbin = Dustbin::get_instance();
     std::shared_ptr<Model> &model = dustbin.get_model();
@@ -71,6 +78,34 @@ static bool auth(const Connection &conn) {
 static void require_auth(Connection &conn) {
     conn.add_header("WWW-Authenticate", "Basic realm=\"Admin\"");
     conn.send_error(401);
+}
+
+static bool is_number(const std::string &str) {
+    for (char c: str) {
+        if (c < '0' || c > '9') {
+            return false;
+        }
+    }
+    return true;
+}
+
+static void set_custom_pages_argument(ValueMap &arguments) {
+    Dustbin &dustbin = Dustbin::get_instance();
+    std::shared_ptr<Model> &model = dustbin.get_model();
+    if (!model) {
+        return;
+    }
+    std::vector<CustomPage> pages;
+    Json::Value pages_json(Json::arrayValue);
+    model->get_pages(pages, false);
+    for (auto &page: pages) {
+        Json::Value page_json;
+        page_json["id"] = page.id;
+        page_json["title"] = page.title;
+        page_json["order"] = page.order;
+        pages_json.append(page_json);
+    }
+    arguments.insert(std::make_pair("custom_pages", pages_json));
 }
 
 static void page_tag_archives_handler(Connection &conn, PageType type) {
@@ -120,6 +155,7 @@ static void page_tag_archives_handler(Connection &conn, PageType type) {
     }
     arguments["pages"] = pages;
     arguments["page"] = page;
+    set_custom_pages_argument(arguments);
     if (type == PageType::Archives) {
         Json::Value archives;
         std::vector<const Article *> *year_articles = nullptr;
@@ -219,6 +255,7 @@ void article_handler(Connection &conn) {
     ValueMap arguments = {
         {"article", article_json}
     };
+    set_custom_pages_argument(arguments);
     if (!temp.render(arguments, conn)) {
         conn.send_error(500);
     }
@@ -244,13 +281,11 @@ void custom_page_handler(Connection &conn) {
     }
     const Template &temp = dustbin.get_template("main/custom_page.html");
     Json::Value page_json;
-    page_json["id"] = page.id;
-    page_json["title"] = page.title;
-    page_json["content"] = page.content;
-    page_json["order"] = page.order;
+    custom_page_to_json(page, page_json);
     ValueMap arguments = {
         {"page", page_json}
     };
+    set_custom_pages_argument(arguments);
     if (!temp.render(arguments, conn)) {
         conn.send_error(500);
     }
@@ -270,6 +305,10 @@ void admin_index_handler(Connection &conn) {
 }
 
 void admin_upload_handler(Connection &conn) {
+    if (!auth(conn)) {
+        require_auth(conn);
+        return;
+    }
     Dustbin &dustbin = Dustbin::get_instance();
     const UploadFile *file_upload = conn.get_file("image");
     if (!file_upload) {
@@ -360,6 +399,10 @@ void admin_articles_handler(Connection &conn) {
 }
 
 void admin_new_article_handler(Connection &conn) {
+    if (!auth(conn)) {
+        require_auth(conn);
+        return;
+    }
     Dustbin &dustbin = Dustbin::get_instance();
     if (conn.get_method() == HTTPMethod::GET) {
         conn.add_header("Content-Type", "text/html");
@@ -410,6 +453,10 @@ void admin_new_article_handler(Connection &conn) {
 }
 
 void admin_edit_article_handler(Connection &conn) {
+    if (!auth(conn)) {
+        require_auth(conn);
+        return;
+    }
     Dustbin &dustbin = Dustbin::get_instance();
     std::shared_ptr<Model> &model = dustbin.get_model();
     if (!model) {
@@ -429,11 +476,11 @@ void admin_edit_article_handler(Connection &conn) {
             return;
         }
         Json::Value article_json;
+        Json::Value tags(Json::arrayValue);
         article_json["id"] = article.id;
         article_json["title"] = article.title;
         article_json["content"] = article.content;
         article_json["date"] = (Json::LargestUInt)article.date;
-        Json::Value tags(Json::arrayValue);
         for (auto &tag: article.tags) {
             tags.append(tag);
         }
@@ -477,6 +524,10 @@ void admin_edit_article_handler(Connection &conn) {
 }
 
 void admin_delete_article_handler(Connection &conn) {
+    if (!auth(conn)) {
+        require_auth(conn);
+        return;
+    }
     Dustbin &dustbin = Dustbin::get_instance();
     std::shared_ptr<Model> &model = dustbin.get_model();
     if (!model) {
@@ -493,10 +544,13 @@ void admin_delete_article_handler(Connection &conn) {
         return;
     }
     conn.write("success");
-    
 }
 
 void admin_config_handler(Connection &conn) {
+    if (!auth(conn)) {
+        require_auth(conn);
+        return;
+    }
     conn.add_header("Content-Type", "text/html");
     Dustbin &dustbin = Dustbin::get_instance();
     const std::string &config_filename = dustbin.get_config_filename();
@@ -534,9 +588,198 @@ void admin_config_handler(Connection &conn) {
 }
 
 void admin_restart_handler(Connection &conn) {
+    if (!auth(conn)) {
+        require_auth(conn);
+        return;
+    }
     Dustbin &dustbin = Dustbin::get_instance();
     dustbin.restart();
 }
 
 void admin_pages_handler(Connection &conn) {
+    if (!auth(conn)) {
+        require_auth(conn);
+        return;
+    }
+    conn.add_header("Content-Type", "text/html");
+    Dustbin &dustbin = Dustbin::get_instance();
+    std::shared_ptr<Model> &model = dustbin.get_model();
+    if (!model) {
+        conn.send_error(500);
+        return;
+    }
+    std::vector<CustomPage> pages;
+    model->get_pages(pages, true);
+    Json::Value pages_json(Json::arrayValue);
+    for (auto &page: pages) {
+        Json::Value page_json;
+        custom_page_to_json(page, page_json);
+        pages_json.append(page_json);
+    }
+    ValueMap arguments = {
+        {"pages", pages_json}
+    };
+    const Template &temp = dustbin.get_template("admin/pages.html");
+    if (!temp.render(arguments, conn)) {
+        conn.send_error(500);
+    }
+}
+
+void admin_new_page_handler(Connection &conn) {
+    if (!auth(conn)) {
+        require_auth(conn);
+        return;
+    }
+    Dustbin &dustbin = Dustbin::get_instance();
+    if (conn.get_method() == HTTPMethod::GET) {
+        conn.add_header("Content-Type", "text/html");
+        const Template &temp = dustbin.get_template("admin/new_edit_page.html");
+        if (!temp.render({{"new", true}}, conn)) {
+            conn.send_error(500);
+        }
+        return;
+    }
+    std::shared_ptr<Model> &model = dustbin.get_model();
+    if (!model) {
+        conn.send_error(500);
+        return;
+    }
+    const std::string &title = conn.get_body_argument("title");
+    std::string id;
+    if (is_number(id)) {
+        id = "p" + title;
+    } else {
+        id = title;
+    }
+    for (int i = 1; ; ++i) {
+        if (!model->has_page(id)) {
+            break;
+        }
+        id = title + "-" + std::to_string(i);
+    }
+    const std::string &content = conn.get_body_argument("content");
+    CustomPage page;
+    page.id = id;
+    page.title = title;
+    page.content = content;
+    if (!model->new_page(page)) {
+        conn.send_error(500);
+        return;
+    }
+    conn.redirect("/admin/pages/");
+}
+
+void admin_edit_page_handler(recycled::Connection &conn) {
+    if (!auth(conn)) {
+        require_auth(conn);
+        return;
+    }
+    Dustbin &dustbin = Dustbin::get_instance();
+    std::shared_ptr<Model> &model = dustbin.get_model();
+    if (!model) {
+        conn.send_error(500);
+        return;
+    }
+    const std::string &id = conn.get_path_argument("id");
+    if (id.empty()) {
+        conn.send_error(404);
+        return;
+    }
+    if (conn.get_method() == HTTPMethod::GET) {
+        conn.add_header("Content-Type", "text/html");
+        CustomPage page;
+        if (!model->get_page(id, page)) {
+            conn.send_error(404);
+            return;
+        }
+        Json::Value page_json;
+        custom_page_to_json(page, page_json);
+        ValueMap arguments = {
+            {"edit", true},
+            {"page", page_json}
+        };
+        const Template &temp = dustbin.get_template("admin/new_edit_page.html");
+        if (!temp.render(arguments, conn)) {
+            conn.send_error(500);
+        }
+        return;
+    }
+    if (!model) {
+        conn.send_error(500);
+        return;
+    }
+    const std::string &title = conn.get_body_argument("title");
+    const std::string &content = conn.get_body_argument("content");
+    if (!model->edit_page(id, title, content)) {
+        conn.send_error(404);
+        return;
+    }
+    conn.redirect("/admin/pages/");
+}
+
+void admin_delete_page_handler(recycled::Connection &conn) {
+    if (!auth(conn)) {
+        require_auth(conn);
+        return;
+    }
+    Dustbin &dustbin = Dustbin::get_instance();
+    std::shared_ptr<Model> &model = dustbin.get_model();
+    if (!model) {
+        conn.send_error(500);
+        return;
+    }
+    const std::string &id = conn.get_path_argument("id");
+    if (id.empty()) {
+        conn.send_error(404);
+        return;
+    }
+    if (!model->delete_page(id)) {
+        conn.send_error(404);
+        return;
+    }
+    conn.write("success");
+}
+
+void admin_reorder_pages_handler(Connection &conn) {
+    if (!auth(conn)) {
+        require_auth(conn);
+        return;
+    }
+    Dustbin &dustbin = Dustbin::get_instance();
+    std::shared_ptr<Model> &model = dustbin.get_model();
+    if (!model) {
+        conn.send_error(500);
+        return;
+    }
+    std::string orders(conn.get_body(), conn.get_body_size());
+    if (orders.empty()) {
+        conn.send_error(400);
+        return;
+    }
+    Json::Value orders_json;
+    Json::Reader reader;
+    if (!reader.parse(orders, orders_json)) {
+        conn.send_error(400);
+        return;
+    }
+    if (!orders_json.isObject()) {
+        conn.send_error(400);
+        return;
+    }
+    std::map<std::string, int> orders_map;
+    const Json::Value::Members &members = orders_json.getMemberNames();
+    for (auto &id: members) {
+        const Json::Value &value = orders_json[id];
+        if (!value.isInt()) {
+            conn.send_error(400);
+            return;
+        }
+        int order = value.asInt();
+        orders_map.insert(std::make_pair(id, order));
+    }
+    if (!model->reorder_pages(orders_map)) {
+        conn.send_error(500);
+        return;
+    }
+    conn.write("success");
 }

@@ -355,6 +355,26 @@ bool Dustbin::init_server() {
                 "/admin/pages/?",
                 admin_pages_handler,
                 {HTTPMethod::GET}
+            },
+            {
+                "/admin/pages/new/?",
+                admin_new_page_handler,
+                {HTTPMethod::GET, HTTPMethod::POST}
+            },
+            {
+                "/admin/pages/edit/<id>/?",
+                admin_edit_page_handler,
+                {HTTPMethod::GET, HTTPMethod::POST}
+            },
+            {
+                "/admin/pages/delete/<id>/?",
+                admin_delete_page_handler,
+                {HTTPMethod::POST}
+            },
+            {
+                "/admin/pages/reorder/?",
+                admin_reorder_pages_handler,
+                {HTTPMethod::POST}
             }
         };
         if (this->config["enable-upload"].asBool()) {
@@ -383,8 +403,7 @@ bool Dustbin::set_globals() {
         return false;
     }
     std::shared_ptr<Environment> &env = this->theme->get_environment();
-    std::shared_ptr<Model> &model = this->model;
-    if (!env || !model) {
+    if (!env) {
         return false;
     }
     if (!this->config.isObject() || !this->config.isMember("site")) {
@@ -399,16 +418,5 @@ bool Dustbin::set_globals() {
         return false;
     }
     env->add_global("site", site);
-    std::vector<CustomPage> pages;
-    Json::Value pages_json(Json::arrayValue);
-    this->model->get_pages(pages, false);
-    for (auto &page: pages) {
-        Json::Value page_json;
-        page_json["id"] = page.id;
-        page_json["title"] = page.title;
-        page_json["order"] = page.order;
-        pages_json.append(page_json);
-    }
-    env->add_global("custom_pages", pages_json);
     return true;
 }
