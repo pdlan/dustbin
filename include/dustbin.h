@@ -17,18 +17,12 @@ class Dustbin {
         void set_cmd_arg(int argc, char **argv);
         bool start();
         recycled::jinja2::Template get_template(const std::string &name);
-        std::shared_ptr<Model> & get_model();
-        std::shared_ptr<Theme> & get_theme();
+        const std::shared_ptr<Model> & get_model();
+        const std::shared_ptr<Theme> & get_theme();
         const std::string & get_config_filename();
         void restart();
         bool check_config(const Json::Value &config);
         const Json::Value & get_config();
-        friend Json::Value filter_url_for_archives(int page);
-        friend Json::Value filter_url_for_static(const std::string &path);
-        friend Json::Value filter_url_for_page(int page);
-        friend Json::Value filter_url_for_article(const std::string &id);
-        friend Json::Value filter_url_for_tag(const std::string &tag, int page);
-        friend Json::Value filter_url_for_custom_page(const std::string &id);
     private:
         std::shared_ptr<recycled::Application<recycled::HTTPServer>> application;
         std::shared_ptr<Model> model;
@@ -48,5 +42,6 @@ class Dustbin {
         bool init_server();
         bool load_models();
         bool set_globals();
+        void error_handler(int code, recycled::Connection &conn);
 };
 #endif

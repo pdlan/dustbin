@@ -1,6 +1,8 @@
 #include <time.h>
+#include <sstream>
 #include <fstream>
 #include <iostream>
+#include <stack>
 #include <string>
 #include <memory>
 #include <recycled.h>
@@ -47,8 +49,8 @@ bool Theme::set_theme(const std::string &theme) {
             {"admin",
              std::make_shared<FileSystemLoader>("admin/templates/")
             },
-            {"block",
-             std::make_shared<FileSystemLoader>("blocks/")
+            {"custom",
+             std::make_shared<FileSystemLoader>("custom/")
             }
         });
         this->env.reset(new Environment(loader));

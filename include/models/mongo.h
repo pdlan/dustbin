@@ -21,6 +21,8 @@ class MongoModel: public Model {
         bool auth(const std::string &username, const std::string &password);
         bool has_article(const std::string &id);
         bool get_article(const std::string &id, Article &article);
+        bool get_prev_next_article_id(const std::string id, Direction dir,
+                                      std::string &dest);
         int get_articles(std::vector<Article> &articles,
                          int articles_per_page, int page,
                          const Json::Value &query=EmptyObject);

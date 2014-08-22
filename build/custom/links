@@ -1,0 +1,3 @@
+{% set links = [
+    ('localhost', 'http://localhost/')
+] %}

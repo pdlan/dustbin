@@ -21,6 +21,8 @@ struct CustomPage {
     int order;
 };
 
+enum class Direction {Prev, Next};
+
 namespace recycled {
 namespace jinja2 {
 class Environment;
@@ -35,6 +37,9 @@ class Model {
                           const std::string &password) = 0;
         virtual bool has_article(const std::string &id) = 0;
         virtual bool get_article(const std::string &id, Article &article) = 0;
+        virtual bool get_prev_next_article_id(const std::string id,
+                                              Direction dir,
+                                              std::string &dest) = 0;
         virtual int get_articles(std::vector<Article> &articles,
                                  int articles_per_page, int page,
                                  const Json::Value &query=EmptyObject) = 0;

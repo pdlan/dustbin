@@ -46,7 +46,7 @@ static void custom_page_to_json(const CustomPage &page, Json::Value &json) {
 
 static bool auth(const Connection &conn) {
     Dustbin &dustbin = Dustbin::get_instance();
-    std::shared_ptr<Model> &model = dustbin.get_model();
+    const std::shared_ptr<Model> &model = dustbin.get_model();
     if (!model) {
         return false;
     }
@@ -91,7 +91,7 @@ static bool is_number(const std::string &str) {
 
 static void set_custom_pages_argument(ValueMap &arguments) {
     Dustbin &dustbin = Dustbin::get_instance();
-    std::shared_ptr<Model> &model = dustbin.get_model();
+    const std::shared_ptr<Model> &model = dustbin.get_model();
     if (!model) {
         return;
     }
@@ -132,8 +132,8 @@ static void page_tag_archives_handler(Connection &conn, PageType type) {
         query["tags"] = tag;
         arguments["name"] = tag;
     }
-    std::shared_ptr<Model> &model = dustbin.get_model();
-    std::shared_ptr<Theme> &theme = dustbin.get_theme();
+    const std::shared_ptr<Model> &model = dustbin.get_model();
+    const std::shared_ptr<Theme> &theme = dustbin.get_theme();
     if (!model || !theme) {
         conn.send_error(500);
         return;
@@ -227,7 +227,7 @@ void tag_handler(Connection &conn) {
 void article_handler(Connection &conn) {
     conn.add_header("Content-Type", "text/html");
     Dustbin &dustbin = Dustbin::get_instance();
-    std::shared_ptr<Model> &model = dustbin.get_model();
+    const std::shared_ptr<Model> &model = dustbin.get_model();
     if (!model) {
         conn.send_error(500);
         return;
@@ -264,7 +264,7 @@ void article_handler(Connection &conn) {
 void custom_page_handler(Connection &conn) {
     conn.add_header("Content-Type", "text/html");
     Dustbin &dustbin = Dustbin::get_instance();
-    std::shared_ptr<Model> &model = dustbin.get_model();
+    const std::shared_ptr<Model> &model = dustbin.get_model();
     if (!model) {
         conn.send_error(500);
         return;
@@ -354,7 +354,7 @@ void admin_articles_handler(Connection &conn) {
     }
     conn.add_header("Content-Type", "text/html");
     Dustbin &dustbin = Dustbin::get_instance();
-    std::shared_ptr<Model> &model = dustbin.get_model();
+    const std::shared_ptr<Model> &model = dustbin.get_model();
     if (!model) {
         conn.send_error(500);
         return;
@@ -412,7 +412,7 @@ void admin_new_article_handler(Connection &conn) {
         }
         return;
     }
-    std::shared_ptr<Model> &model = dustbin.get_model();
+    const std::shared_ptr<Model> &model = dustbin.get_model();
     if (!model) {
         conn.send_error(500);
         return;
@@ -458,7 +458,7 @@ void admin_edit_article_handler(Connection &conn) {
         return;
     }
     Dustbin &dustbin = Dustbin::get_instance();
-    std::shared_ptr<Model> &model = dustbin.get_model();
+    const std::shared_ptr<Model> &model = dustbin.get_model();
     if (!model) {
         conn.send_error(500);
         return;
@@ -529,7 +529,7 @@ void admin_delete_article_handler(Connection &conn) {
         return;
     }
     Dustbin &dustbin = Dustbin::get_instance();
-    std::shared_ptr<Model> &model = dustbin.get_model();
+    const std::shared_ptr<Model> &model = dustbin.get_model();
     if (!model) {
         conn.send_error(500);
         return;
@@ -603,7 +603,7 @@ void admin_pages_handler(Connection &conn) {
     }
     conn.add_header("Content-Type", "text/html");
     Dustbin &dustbin = Dustbin::get_instance();
-    std::shared_ptr<Model> &model = dustbin.get_model();
+    const std::shared_ptr<Model> &model = dustbin.get_model();
     if (!model) {
         conn.send_error(500);
         return;
@@ -639,7 +639,7 @@ void admin_new_page_handler(Connection &conn) {
         }
         return;
     }
-    std::shared_ptr<Model> &model = dustbin.get_model();
+    const std::shared_ptr<Model> &model = dustbin.get_model();
     if (!model) {
         conn.send_error(500);
         return;
@@ -675,7 +675,7 @@ void admin_edit_page_handler(recycled::Connection &conn) {
         return;
     }
     Dustbin &dustbin = Dustbin::get_instance();
-    std::shared_ptr<Model> &model = dustbin.get_model();
+    const std::shared_ptr<Model> &model = dustbin.get_model();
     if (!model) {
         conn.send_error(500);
         return;
@@ -723,7 +723,7 @@ void admin_delete_page_handler(recycled::Connection &conn) {
         return;
     }
     Dustbin &dustbin = Dustbin::get_instance();
-    std::shared_ptr<Model> &model = dustbin.get_model();
+    const std::shared_ptr<Model> &model = dustbin.get_model();
     if (!model) {
         conn.send_error(500);
         return;
@@ -746,7 +746,7 @@ void admin_reorder_pages_handler(Connection &conn) {
         return;
     }
     Dustbin &dustbin = Dustbin::get_instance();
-    std::shared_ptr<Model> &model = dustbin.get_model();
+    const std::shared_ptr<Model> &model = dustbin.get_model();
     if (!model) {
         conn.send_error(500);
         return;

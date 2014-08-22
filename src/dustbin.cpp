@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <dlfcn.h>
+#include <functional>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -81,11 +82,11 @@ recycled::jinja2::Template Dustbin::get_template(const std::string &name) {
     return this->theme->get_environment()->get_template(name);
 }
 
-std::shared_ptr<Model> & Dustbin::get_model() {
+const std::shared_ptr<Model> & Dustbin::get_model() {
     return this->model;
 }
 
-std::shared_ptr<Theme> & Dustbin::get_theme() {
+const std::shared_ptr<Theme> & Dustbin::get_theme() {
     return this->theme;
 }
 
@@ -229,7 +230,9 @@ bool Dustbin::init_theme() {
         !env->add_filter("url_for_page", filter_url_for_page) ||
         !env->add_filter("url_for_article", filter_url_for_article) ||
         !env->add_filter("url_for_tag", filter_url_for_tag) ||
-        !env->add_filter("url_for_custom_page", filter_url_for_custom_page)) {
+        !env->add_filter("url_for_custom_page", filter_url_for_custom_page) ||
+        !env->add_filter("url_for_prev_article", filter_url_for_prev_article) ||
+        !env->add_filter("url_for_next_article", filter_url_for_next_article)) {
         std::cerr << "Cannot add filters\n";
         return false;
     }
@@ -243,17 +246,6 @@ bool Dustbin::init_server() {
     const Json::Value &url = this->config["url"];
     const Json::Value &patterns = url["patterns"];
     const Json::Value &paths = url["paths"];
-    this->paths = {
-        {"prefix", paths["prefix"].asString()},
-        {"archives", paths["archives"].asString()},
-        {"archives-page", paths["archives-page"].asString()},
-        {"static", paths["static"].asString()},
-        {"page", paths["page"].asString()},
-        {"article", paths["article"].asString()},
-        {"tag", paths["tag"].asString()},
-        {"tag-page", paths["tag-page"].asString()},
-        {"custom-page", paths["custom-page"].asString()}
-    };
     try {
         std::vector<HandlerStruct> handlers = {
             {
@@ -385,6 +377,10 @@ bool Dustbin::init_server() {
             });
         }
         this->application.reset(new Application<HTTPServer>(handlers));
+        auto error_handler =
+            std::bind(&Dustbin::error_handler, this,
+                      std::placeholders::_1, std::placeholders::_2);
+        this->application->set_error_handler(error_handler);
         this->application->listen(port, ip);
     } catch (const std::exception &e) {
         std::cerr << "Cannot listen.\n";
@@ -419,4 +415,23 @@ bool Dustbin::set_globals() {
     }
     env->add_global("site", site);
     return true;
+}
+
+void Dustbin::error_handler(int code, recycled::Connection &conn) {
+    if (code != 404) {
+        default_error_handler(code, conn);
+        return;
+    }
+    try {
+        const Template &temp = this->get_template("main/404.html");
+        if (!temp.render({}, conn)) {
+            default_error_handler(code, conn);
+            return;
+        }
+        conn.add_header("Content-Type", "text/html");
+        conn.set_status(code);
+    } catch (const std::exception &e) {
+        default_error_handler(code, conn);
+        return;
+    }
 }

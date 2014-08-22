@@ -236,6 +236,45 @@ bool MongoModel::get_article(const std::string &id, Article &article) {
     return false;
 }
 
+bool MongoModel::get_prev_next_article_id(const std::string id, Direction dir,
+                                         std::string &dest) {
+    if (!this->conn) {
+        return false;
+    }
+    auto cursor = this->conn->query(this->name + ".articles",
+                                    QUERY("id" << id));
+    if (!cursor->more()) {
+        return false;
+    }
+    const BSONObj &obj = cursor->next();
+    if (!obj.hasField("date")) {
+        return false;
+    }
+    const BSONElement &date = obj.getField("date");
+    if (date.type() != Date) {
+        return false;
+    }
+    auto op = dir == Direction::Next ? GT : LT;
+    Query query(BSON("date" << op << date));
+    if (dir == Direction::Next) {
+        query = query.sort("date");
+    } else {
+        query = query.sort("date", -1);
+    }
+    cursor = this->conn->query(this->name + ".articles", query, 1);
+    if (cursor->more()) {
+        const BSONObj &obj_new = cursor->next();
+        if (!obj_new.hasField("id") ||
+            obj_new.getField("id").type() != String) {
+            return false;
+        }
+        dest = obj_new.getStringField("id");
+        return true;
+    } else {
+        return false;
+    }
+}
+
 int MongoModel::get_articles(std::vector<Article> &articles,
                              int articles_per_page, int page,
                              const Json::Value &query) {
@@ -250,10 +289,14 @@ int MongoModel::get_articles(std::vector<Article> &articles,
         limit = articles_per_page;
         skip = (page - 1) * articles_per_page;
     }
-    auto cursor = this->conn->query(this->name + ".articles",
-                                    query_mongo, limit, skip);
-    int count;
-    for (count = 0; cursor->more(); ++count) {
+    auto cursor = this->conn->query(this->name + ".articles", query_mongo);
+    int count = cursor->itcount();
+    if (!count) {
+        return 0;
+    }
+    cursor = this->conn->query(this->name + ".articles",
+                               query_mongo, limit, skip);
+    while (cursor->more()) {
         const BSONObj &obj = cursor->next();
         Article article;
         if (!bsonobj_to_article(obj, article)) {
