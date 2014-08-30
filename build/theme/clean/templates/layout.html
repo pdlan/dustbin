@@ -5,7 +5,7 @@
     {% block head %}{% endblock %}
     <meta name="viewport" content="width=device-width" />
     <title>{% block title %}{{ site.name }}{% endblock %}</title>
-    <link rel="stylesheet" href="{{ 'clean.css'|url_for_static }}" type="text/css" />
+    <link rel="stylesheet" href="{{ url_for_static('clean.css') }}" type="text/css" />
     <link rel="alternate" type="application/rss+xml" href="{{ site.url }}" title="{{ site.name }}" />
 ##    <link rel="canonical" href="{{ permalink }}"/>
 </head>
@@ -16,10 +16,10 @@
             <nav>
                 {% if custom_pages is iterable %}
                     {% for page in custom_pages %}
-                    <a href="{{ page.id|url_for_custom_page }}">{{ page.title }}</a>
+                    <a href="{{ url_for_custom_page(page.id) }}">{{ page.title }}</a>
                     {% endfor %}
                 {% endif %}
-              <a href="{{ 1|url_for_archives }}">Archives</a>
+              <a href="{{ url_for_archives(1) }}">Archives</a>
             </nav>
         </header>
         <div id="content">

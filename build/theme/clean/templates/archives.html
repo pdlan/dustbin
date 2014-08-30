@@ -10,7 +10,7 @@ Archives | {{ site.name }}
 <ol id="posts">
     {% for article in archive.articles %}
     <li>
-        <span class="meta">{{ article.date|format_time('%b %d') }}</span> <a href="{{ article.id|url_for_article }}">{{ article.title }}</a>
+        <span class="meta">{{ article.date|format_time('%b %d') }}</span> <a href="{{ url_for_article(article.id) }}">{{ article.title }}</a>
     </li>
     {% endfor %}
 </ol>
@@ -18,13 +18,13 @@ Archives | {{ site.name }}
 
 <div id="pagination">
     {% if has_prev %}
-    <a id="prev" href="{{ prev|url_for_page }}">Prev</a>
+    <a id="prev" href="{{ url_for_page(prev) }}">Prev</a>
     {% endif %}
 
     <span>Page {{ page }} of {{ pages }}</span>
 
     {% if has_next %}
-    <a id="next" href="{{ next|url_for_page }}">Next</a>
+    <a id="next" href="{{ url_for_page(next) }}">Next</a>
     {% endif %}
 </div>
 {% endblock %}

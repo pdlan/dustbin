@@ -34,7 +34,7 @@
         <tr data-id="{{ article.id|urlencode }}">
           <td class="col-md-2">{{ article.date|format_time('%b %d') }}</td>
           <td class="col-md-8 col-md-offset-2">
-            <a href="{{ article.id|url_for_article }}">{{ article.title }}</a>
+            <a href="{{ url_for_article(article.id) }}">{{ article.title }}</a>
           </td>
           <td class="col-md-1 col-md-offset-10">
             <a href="/admin/articles/edit/{{ article.id }}/">编辑</a>

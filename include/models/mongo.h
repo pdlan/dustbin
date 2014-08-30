@@ -41,6 +41,7 @@ class MongoModel: public Model {
                        const std::string &content);
         bool delete_page(const std::string &id);
         bool reorder_pages(const std::map<std::string, int> &orders);
+        bool add_user(const std::string &username, const std::string &password);
     private:
         std::shared_ptr<mongo::DBClientBase> conn;
         std::string name;

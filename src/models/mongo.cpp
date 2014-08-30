@@ -1,4 +1,6 @@
 #include <math.h>
+#include <time.h>
+#include <stdlib.h>
 #include <string>
 #include <vector>
 #include <map>
@@ -128,6 +130,20 @@ static BSONObj article_to_bsonobj(const Article &article) {
     return obj_builder.obj();
 }
 
+static std::string random_string() {
+    const int length = 20;
+    std::string buf;
+    const char *charset =
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    srand(time(nullptr));
+    for (int i = 0; i < length; ++i) {
+        int index = rand() % length;
+        char ch = charset[index];
+        buf += ch;
+    }
+    return buf;
+}
+
 MongoModel::MongoModel() {}
 
 MongoModel::~MongoModel() {}
@@ -206,7 +222,8 @@ bool MongoModel::auth(const std::string &username,
     }
     const std::string &password_encrypted = obj.getStringField("password");
     const std::string &salt = obj.getStringField("salt");
-    return sha256(password + salt) == password_encrypted;
+    std::string pwd_with_salt = password + salt;
+    return sha256(pwd_with_salt) == password_encrypted;
 }
 
 bool MongoModel::has_article(const std::string &id) {
@@ -368,7 +385,7 @@ bool MongoModel::delete_article(const std::string &id) {
 }
 
 bool MongoModel::has_page(const std::string &id) {
-     if (!this->conn) {
+    if (!this->conn) {
         return false;
     }
     auto cursor = this->conn->query(this->name + ".pages",
@@ -485,5 +502,24 @@ bool MongoModel::reorder_pages(const std::map<std::string, int> &orders) {
                            BSON("id" << id << "title" << page.title <<
                                 "content" << page.content << "order" << order));
     }
+    return true;
+}
+
+bool MongoModel::add_user(const std::string &username,
+                          const std::string &password) {
+    if (!this->conn) {
+        return false;
+    }
+    auto cursor = this->conn->query(this->name + ".users",
+                                    QUERY("username" << username));
+    if (cursor->more()) {
+        return false;
+    }
+    const std::string &salt = random_string();
+    const std::string &password_encrypted = sha256(password + salt);
+    this->conn->insert(this->name + ".users",
+                       BSON("username" << username <<
+                            "password" << password_encrypted <<
+                            "salt" << salt));
     return true;
 }

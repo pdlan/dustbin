@@ -19,29 +19,15 @@ using namespace recycled;
 using namespace recycled::jinja2;
 
 static std::string base64decode(const std::string &str) {
-    char *out = new char[str.length()];
+    char *out = new char[str.length()] {0};
     int length = EVP_DecodeBlock((unsigned char *)out,
                                  (unsigned char *)str.c_str(), str.length());
-    return std::string(out, length);
-}
-
-static void article_to_json(const Article *article, Json::Value &json) {
-    json["id"] = article->id;
-    json["title"] = article->title;
-    json["content"] = article->content;
-    json["date"] = (Json::LargestUInt)article->date;
-    Json::Value tags;
-    for (auto &tag: article->tags) {
-        tags.append(tag);
+    std::string out_str;
+    for (int i = 0; i < length && out[i] != '\0'; ++i) {
+        out_str += out[i];
     }
-    json["tags"] = tags;
-}
-
-static void custom_page_to_json(const CustomPage &page, Json::Value &json) {
-    json["id"] = page.id;
-    json["title"] = page.title;
-    json["content"] = page.content;
-    json["order"] = page.order;
+    out_str += "\0";
+    return out_str;
 }
 
 static bool auth(const Connection &conn) {
@@ -72,6 +58,7 @@ static bool auth(const Connection &conn) {
     const std::string &username = decoded.substr(0, delimiter_pos);
     length = decoded.length() - delimiter_pos - 1;
     const std::string &password = decoded.substr(delimiter_pos + 1, length);
+    printf("%s %d\n", decoded.c_str(), decoded.length());
     return model->auth(username, password);
 }
 
@@ -142,8 +129,9 @@ static void page_tag_archives_handler(Connection &conn, PageType type) {
     Json::Value articles_json;
     std::vector<Article> articles;
     int pages = model->get_articles(articles, articles_per_page, page, query);
-    if (page > pages) {
+    if (page > pages && page != 0) {
         conn.send_error(404);
+        return;
     }
     if (page > 1 && page <= pages) {
         arguments["has_prev"] = true;
@@ -291,6 +279,15 @@ void custom_page_handler(Connection &conn) {
     }
 }
 
+void feed_handler(Connection &conn) {
+    Dustbin &dustbin = Dustbin::get_instance();
+    const Template &temp = dustbin.get_template("custom/feed.xml");
+    if (!temp.render({}, conn)) {
+        conn.send_error(500);
+    }
+    conn.add_header("Content-Type", "text/xml");
+}
+
 void admin_index_handler(Connection &conn) {
     if (!auth(conn)) {
         require_auth(conn);
@@ -371,8 +368,9 @@ void admin_articles_handler(Connection &conn) {
     }
     std::vector<Article> articles;
     int pages = model->get_articles(articles, 20, page);
-    if (page > pages) {
+    if (page > pages && page != 0) {
         conn.send_error(404);
+        return;
     }
     ValueMap arguments;
     if (page > 1 && page <= pages) {

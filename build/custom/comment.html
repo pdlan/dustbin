@@ -1,3 +1,4 @@
+{% set short_name = 'pdlblog' %} ##your shortname
 <!-- 多说评论框 start -->
 	<div class="ds-thread" data-thread-key="{%- if article -%}
     article-{{ article.id }}
@@ -8,14 +9,14 @@
     {%- elif page -%}
     {{ page.id }}
     {%- endif -%}" data-url="{%- if article -%}
-    {{ article.id|url_for_article }}
+    {{ url_for_article(article.id) }}
     {%- elif page -%}
-    {{ page.id|url_for_custom_page }}
+    {{ url_for_custom_page(page.id) }}
     {%- endif -%}"></div>
 <!-- 多说评论框 end -->
 <!-- 多说公共JS代码 start (一个网页只需插入一次) -->
 <script type="text/javascript">
-var duoshuoQuery = {short_name:"pdlblog"};
+var duoshuoQuery = {short_name:'{{ short_name }}'};
 	(function() {
 		var ds = document.createElement('script');
 		ds.type = 'text/javascript';ds.async = true;

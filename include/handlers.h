@@ -7,6 +7,7 @@ void archives_handler(recycled::Connection &conn);
 void tag_handler(recycled::Connection &conn);
 void article_handler(recycled::Connection &conn);
 void custom_page_handler(recycled::Connection &conn);
+void feed_handler(recycled::Connection &conn);
 void admin_index_handler(recycled::Connection &conn);
 void admin_upload_handler(recycled::Connection &conn);
 void admin_articles_handler(recycled::Connection &conn);

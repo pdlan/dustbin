@@ -41,7 +41,7 @@
             <input type="text" value="{{ page.order }}" pattern="[0-9]+" class="form-control order" data-id="{{ page.id|urlencode }}">
           </td>
           <td class="col-md-10 col-md-offset-1">
-            <a href="{{ page.id|url_for_custom_page }}">{{ page.title }}</a>
+            <a href="{{ url_for_custom_page(page.id) }}">{{ page.title }}</a>
           </td>
           <td class="col-md-1 col-md-offset-11">
             <a href="/admin/pages/edit/{{ page.id }}/">编辑</a>

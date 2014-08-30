@@ -53,11 +53,13 @@ class Model {
         virtual bool get_page(const std::string &id, CustomPage &page) = 0;
         virtual void get_pages(std::vector<CustomPage> &pages,
                                bool has_content=true) = 0;
-        // Ignore order
+        // Ignore page.order.
         virtual bool new_page(const CustomPage &page) = 0;
         virtual bool edit_page(const std::string &id, const std::string &title,
                                const std::string &content) = 0;
         virtual bool delete_page(const std::string &id) = 0;
         virtual bool reorder_pages(const std::map<std::string, int> &orders) = 0;
+        virtual bool add_user(const std::string &username,
+                              const std::string &password) = 0;
 };
 #endif

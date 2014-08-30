@@ -17,7 +17,7 @@
 #include "model.h"
 #include "theme.h"
 #include "utils.h"
-#include "filters.h"
+#include "global_functions.h"
 
 using namespace recycled;
 using namespace recycled::jinja2;
@@ -47,9 +47,6 @@ bool Dustbin::initialize(const std::string &config_filename) {
         return false;
     }
     if (!this->init_theme()) {
-        return false;
-    }
-    if (!this->load_models()) {
         return false;
     }
     if (!this->init_model()) {
@@ -145,7 +142,8 @@ bool Dustbin::check_config(const Json::Value &config) {
         {"article", Json::stringValue},
         {"tag", Json::stringValue},
         {"tag-page", Json::stringValue},
-        {"custom-page", Json::stringValue}
+        {"custom-page", Json::stringValue},
+        {"feed", Json::stringValue}
     }) || ! check_members(paths, {
         {"prefix", Json::stringValue},
         {"archives", Json::stringValue},
@@ -155,7 +153,8 @@ bool Dustbin::check_config(const Json::Value &config) {
         {"article", Json::stringValue},
         {"tag", Json::stringValue},
         {"tag-page", Json::stringValue},
-        {"custom-page", Json::stringValue}
+        {"custom-page", Json::stringValue},
+        {"feed", Json::stringValue}
     })) {
         return false;
     }
@@ -179,10 +178,6 @@ bool Dustbin::check_config(const Json::Value &config) {
 bool Dustbin::init_model() {
     const Json::Value &db = this->config["db"];
     const std::string &db_type = db["type"].asString();
-    if (!this->models.count(db_type)) {
-        std::cerr << "No such database model.\n";
-        return false;
-    }
     std::string model_path = "models/" + db_type + ".so";
     void *handle = dlopen(model_path.c_str(), RTLD_LAZY);
     if (!handle) {
@@ -225,15 +220,24 @@ bool Dustbin::init_theme() {
         std::cerr << "Bad template environment.\n";
         return false;
     }
-    if (!env->add_filter("url_for_archives", filter_url_for_archives) ||
-        !env->add_filter("url_for_static", filter_url_for_static) ||
-        !env->add_filter("url_for_page", filter_url_for_page) ||
-        !env->add_filter("url_for_article", filter_url_for_article) ||
-        !env->add_filter("url_for_tag", filter_url_for_tag) ||
-        !env->add_filter("url_for_custom_page", filter_url_for_custom_page) ||
-        !env->add_filter("url_for_prev_article", filter_url_for_prev_article) ||
-        !env->add_filter("url_for_next_article", filter_url_for_next_article)) {
-        std::cerr << "Cannot add filters\n";
+    if (!env->add_global_func("url_for_archives", global_url_for_archives) ||
+        !env->add_global_func("url_for_static", global_url_for_static) ||
+        !env->add_global_func("url_for_page", global_url_for_page) ||
+        !env->add_global_func("url_for_article", global_url_for_article) ||
+        !env->add_global_func("url_for_tag", global_url_for_tag) ||
+        !env->add_global_func("url_for_custom_page",
+                              global_url_for_custom_page) ||
+        !env->add_global_func("url_for_prev_article",
+                              global_url_for_prev_article) ||
+        !env->add_global_func("url_for_next_article",
+                              global_url_for_next_article) ||
+        !env->add_global_func("url_for_feed", global_url_for_feed) ||
+        !env->add_global_func("get_articles", global_get_articles) ||
+        !env->add_global_func("get_article", global_get_article) ||
+        !env->add_global_func("get_pages", global_get_pages) ||
+        !env->add_global_func("get_page", global_get_page) ||
+        !env->add_global_func("py_import", global_py_import)) {
+        std::cerr << "Cannot add global functions\n";
         return false;
     }
     return true;
@@ -245,7 +249,6 @@ bool Dustbin::init_server() {
     const std::string &theme = this->config["theme"].asString();
     const Json::Value &url = this->config["url"];
     const Json::Value &patterns = url["patterns"];
-    const Json::Value &paths = url["paths"];
     try {
         std::vector<HandlerStruct> handlers = {
             {
@@ -291,6 +294,11 @@ bool Dustbin::init_server() {
             {
                 patterns["tag"].asString(),
                 tag_handler,
+                {HTTPMethod::GET}
+            },
+            {
+                patterns["feed"].asString(),
+                feed_handler,
                 {HTTPMethod::GET}
             },
             {
@@ -389,11 +397,6 @@ bool Dustbin::init_server() {
     return true;
 }
 
-bool Dustbin::load_models() {
-    this->models.insert("mongo");
-    return true;
-}
-
 bool Dustbin::set_globals() {
     if (!this->theme) {
         return false;
@@ -422,16 +425,11 @@ void Dustbin::error_handler(int code, recycled::Connection &conn) {
         default_error_handler(code, conn);
         return;
     }
-    try {
-        const Template &temp = this->get_template("main/404.html");
-        if (!temp.render({}, conn)) {
-            default_error_handler(code, conn);
-            return;
-        }
-        conn.add_header("Content-Type", "text/html");
-        conn.set_status(code);
-    } catch (const std::exception &e) {
+    const Template &temp = this->get_template("main/404.html");
+    if (!temp.render({}, conn)) {
         default_error_handler(code, conn);
         return;
     }
+    conn.add_header("Content-Type", "text/html");
+    conn.set_status(code);
 }

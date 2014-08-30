@@ -28,7 +28,6 @@ class Dustbin {
         std::shared_ptr<Model> model;
         std::shared_ptr<Theme> theme;
         std::map<std::string, std::string> paths;
-        std::set<std::string> models;
         Json::Value config;
         std::string config_filename;
         char **argv;
@@ -40,7 +39,6 @@ class Dustbin {
         bool init_model();
         bool init_theme();
         bool init_server();
-        bool load_models();
         bool set_globals();
         void error_handler(int code, recycled::Connection &conn);
 };

@@ -1,0 +1,43 @@
+{%- set full_text = true -%}
+## Full-text output or not?
+{%- set articles_count = 20 -%}
+## count of articles to output
+{%- set feed_title = 'TITLE' -%}
+## title of feed
+{%- set feed_link = 'LINK' -%}
+## link of your website
+{%- set feed_author = ['AUTHOR'] -%}
+## authors of articles
+{%- set feed_id = 'ID' -%}
+## id of feed
+
+{%- set articles = get_articles(articles_count, 1, {}) -%}
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <title>{{ feed_title }}</title>
+    <link href="{{ feed_title }}" />
+    {%- if articles|count > 0 -%}
+    <updated>{{ articles[-1].date|format_time('%FT%TZ') }}</updated>
+    {%- endif -%}
+    <author>
+    {%- for author in feed_author -%}
+        <name>{{ author }}</name>
+    {%- endfor -%}
+    </author>
+    <id>{{ feed_id }}</id>
+    {%- for article in articles %}
+    <entry>
+        <title>{{ article.title }}</title>
+        <link href="{{ url_for_article(article.id) }}" />
+        <id>article.id</id>
+        <updated>{{ article.date|format_time('%FT%TZ') }}</updated>
+        <summary>
+        {%- if full_text -%}
+            {{ article.content }}
+        {%- else -%}
+            {{ article.content|striptags|truncate(250) }}
+        {%- endif -%}
+        </summary>
+    </entry>
+    {%- endfor -%}
+</feed>

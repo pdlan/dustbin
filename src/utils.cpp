@@ -2,6 +2,7 @@
 #include <vector>
 #include <map>
 #include <jsoncpp/json/json.h>
+#include "model.h"
 
 bool check_members(const Json::Value &json,
                    const std::map<std::string, Json::ValueType> &members) {
@@ -31,3 +32,22 @@ std::string replace(const std::string &str,
     }
     return buf;
 };
+
+void article_to_json(const Article *article, Json::Value &json) {
+    json["id"] = article->id;
+    json["title"] = article->title;
+    json["content"] = article->content;
+    json["date"] = (Json::LargestUInt)article->date;
+    Json::Value tags(Json::arrayValue);
+    for (auto &tag: article->tags) {
+        tags.append(tag);
+    }
+    json["tags"] = tags;
+}
+
+void custom_page_to_json(const CustomPage &page, Json::Value &json) {
+    json["id"] = page.id;
+    json["title"] = page.title;
+    json["content"] = page.content;
+    json["order"] = page.order;
+}
